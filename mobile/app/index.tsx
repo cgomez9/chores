@@ -1,14 +1,4 @@
-import { View, Text, StyleSheet } from 'react-native';
-
-export default function Home() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.text}>Shores — M1 starting point</Text>
-    </View>
-  );
+import { Redirect } from 'expo-router';
+export default function Entry() {
+  return <Redirect href="/(auth)/login" />;
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  text: { fontSize: 18 },
-});
