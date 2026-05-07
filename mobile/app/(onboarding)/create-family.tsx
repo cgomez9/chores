@@ -6,6 +6,7 @@ import { TextField } from '../../src/components/TextField';
 import { AvatarPicker } from '../../src/components/AvatarPicker';
 import type { AvatarId } from '../../src/constants/avatars';
 import { supabase } from '../../src/lib/supabase';
+import { refetchFamily } from '../../src/hooks/useFamily';
 
 export default function CreateFamilyScreen() {
   const router = useRouter();
@@ -30,6 +31,7 @@ export default function CreateFamilyScreen() {
       setError(error.message);
       return;
     }
+    refetchFamily();
     router.replace('/(onboarding)/add-kid');
   }
 

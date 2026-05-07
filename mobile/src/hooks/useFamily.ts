@@ -6,8 +6,21 @@ type FamilyState =
   | { status: 'no-family' }
   | { status: 'has-family'; familyId: string };
 
+const refetchListeners = new Set<() => void>();
+
+export function refetchFamily() {
+  refetchListeners.forEach((fn) => fn());
+}
+
 export function useFamily(userId: string | undefined): FamilyState {
   const [state, setState] = useState<FamilyState>({ status: 'loading' });
+  const [refetchToken, setRefetchToken] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setRefetchToken((t) => t + 1);
+    refetchListeners.add(bump);
+    return () => { refetchListeners.delete(bump); };
+  }, []);
 
   useEffect(() => {
     if (!userId) return;
@@ -30,7 +43,7 @@ export function useFamily(userId: string | undefined): FamilyState {
       });
 
     return () => { cancelled = true; };
-  }, [userId]);
+  }, [userId, refetchToken]);
 
   return state;
 }
