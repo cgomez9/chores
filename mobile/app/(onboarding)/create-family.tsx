@@ -26,12 +26,27 @@ export default function CreateFamilyScreen() {
       parent_name: parentName.trim(),
       parent_avatar: avatar,
     });
-    setLoading(false);
     if (error) {
+      setLoading(false);
       setError(error.message);
       return;
     }
     refetchFamily();
+
+    // Seed starter chores. Find the new family_id from the parent profile we just created.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('family_id')
+      .eq('type', 'parent')
+      .maybeSingle();
+    if (profile) {
+      const { error: seedErr } = await supabase.rpc('seed_starter_chores', {
+        family_id: (profile as { family_id: string }).family_id,
+      });
+      if (seedErr) console.warn('seed_starter_chores failed:', seedErr.message);
+    }
+
+    setLoading(false);
     router.replace('/(onboarding)/add-kid');
   }
 
