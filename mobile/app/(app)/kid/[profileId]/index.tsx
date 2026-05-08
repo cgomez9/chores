@@ -1,3 +1,4 @@
+// mobile/app/(app)/kid/[profileId]/index.tsx
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +8,7 @@ type Instance = {
   id: string;
   status: 'pending' | 'submitted' | 'approved' | 'rejected';
   due_at: string;
+  rejection_reason: string | null;
   chore: { id: string; title: string; star_value: number; verification_mode: 'auto'|'photo'|'approval' } | null;
 };
 
@@ -15,7 +17,7 @@ export default function KidHome() {
   const { profileId } = useLocalSearchParams<{ profileId: string }>();
   const qc = useQueryClient();
 
-  const { data, isLoading, error } = useQuery({
+  const { data: instances, isLoading, error } = useQuery({
     queryKey: ['kid-today', profileId],
     queryFn: async (): Promise<Instance[]> => {
       const startOfDay = new Date();
@@ -23,14 +25,37 @@ export default function KidHome() {
       const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
       const { data, error } = await supabase
         .from('chore_instances')
-        .select('id, status, due_at, chore:chores(id,title,star_value,verification_mode)')
+        .select('id, status, due_at, rejection_reason, chore:chores(id,title,star_value,verification_mode)')
         .or(`assignee_profile_id.eq.${profileId},assignee_profile_id.is.null`)
         .gte('due_at', startOfDay.toISOString())
         .lt('due_at', endOfDay.toISOString())
-        .in('status', ['pending', 'submitted'])
+        .in('status', ['pending', 'submitted', 'rejected'])
         .order('due_at');
       if (error) throw error;
       return (data ?? []) as unknown as Instance[];
+    },
+    enabled: !!profileId,
+  });
+
+  const { data: balance } = useQuery({
+    queryKey: ['balance', profileId],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase
+        .from('star_ledger')
+        .select('delta')
+        .eq('profile_id', profileId);
+      if (error) throw error;
+      return (data ?? []).reduce((sum, r) => sum + (r as { delta: number }).delta, 0);
+    },
+    enabled: !!profileId,
+  });
+
+  const { data: streak } = useQuery({
+    queryKey: ['streak', profileId],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc('current_streak', { p: profileId });
+      if (error) throw error;
+      return (data as number | null) ?? 0;
     },
     enabled: !!profileId,
   });
@@ -64,24 +89,41 @@ export default function KidHome() {
         </Pressable>
       </View>
 
+      <View style={styles.statsRow}>
+        <View style={styles.pill}>
+          <Text style={styles.pillText}>⭐ {balance ?? 0}</Text>
+        </View>
+        {(streak ?? 0) > 0 && (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>🔥 {streak}</Text>
+          </View>
+        )}
+      </View>
+
       {isLoading && <ActivityIndicator />}
       {error && <Text style={styles.err}>{(error as Error).message}</Text>}
-
-      {data && data.length === 0 && (
+      {instances && instances.length === 0 && (
         <Text style={styles.empty}>All done — great job! 🌟</Text>
       )}
 
       <ScrollView contentContainerStyle={{ gap: 12 }}>
-        {(data ?? []).map((inst) => {
+        {(instances ?? []).map((inst) => {
           const submitted = inst.status === 'submitted';
+          const rejected = inst.status === 'rejected';
+          const cardStyle = [styles.card, submitted && styles.cardWaiting, rejected && styles.cardRejected];
           return (
-            <View key={inst.id} style={[styles.card, submitted && styles.cardWaiting]}>
+            <View key={inst.id} style={cardStyle}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.choreTitle}>{inst.chore?.title}</Text>
                 <Text style={styles.stars}>⭐ {inst.chore?.star_value}</Text>
                 {submitted && <Text style={styles.waiting}>Waiting for parent ✋</Text>}
+                {rejected && (
+                  <Text style={styles.rejected}>
+                    ✗ Rejected{inst.rejection_reason ? `: ${inst.rejection_reason}` : ''}
+                  </Text>
+                )}
               </View>
-              {!submitted && (
+              {!submitted && !rejected && (
                 <Pressable onPress={() => onDone(inst)} style={styles.doneBtn}>
                   <Text style={styles.doneText}>Done</Text>
                 </Pressable>
@@ -96,16 +138,21 @@ export default function KidHome() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 24, paddingTop: 64, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   title: { fontSize: 22, fontWeight: '700' },
   switch: { color: '#3b82f6', fontWeight: '500' },
+  statsRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  pill: { backgroundColor: '#fef3c7', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  pillText: { fontSize: 14, fontWeight: '600', color: '#92400e' },
   err: { color: '#ef4444' },
   empty: { textAlign: 'center', fontSize: 18, marginTop: 64, color: '#6b7280' },
   card: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
   cardWaiting: { opacity: 0.55 },
+  cardRejected: { opacity: 0.55, backgroundColor: '#fee2e2' },
   choreTitle: { fontSize: 18, fontWeight: '600' },
   stars: { fontSize: 14, color: '#6b7280', marginTop: 2 },
   waiting: { fontSize: 12, color: '#9ca3af', marginTop: 4 },
+  rejected: { fontSize: 12, color: '#b91c1c', marginTop: 4, fontStyle: 'italic' },
   doneBtn: { backgroundColor: '#10b981', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 999 },
   doneText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });
