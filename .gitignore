@@ -24,6 +24,7 @@ mobile/android/
 
 # Brainstorm session artifacts
 .superpowers/
+.remember/
 
 # Editors
 .vscode/
