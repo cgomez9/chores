@@ -21,7 +21,7 @@ begin
 
   insert into public.chores(family_id, title, star_value, verification_mode, recurrence, assignee_profile_id, created_by, next_due_at)
   select seed_starter_chores.family_id, t.title, 10, 'approval', '{"type":"daily"}'::jsonb, null, caller_profile,
-         public.next_occurrence('{"type":"daily"}'::jsonb, now() - interval '1 second')
+         public.next_occurrence('{"type":"daily"}'::jsonb, now() - interval '1 day')
   from (values ('Make bed'), ('Brush teeth'), ('Feed pet'), ('Tidy room'), ('Homework')) t(title);
 
   get diagnostics inserted = row_count;
@@ -40,7 +40,7 @@ begin
       if pp is null then continue; end if;
       insert into public.chores(family_id, title, star_value, verification_mode, recurrence, created_by, next_due_at)
       select f.id, t.title, 10, 'approval', '{"type":"daily"}'::jsonb, pp,
-             public.next_occurrence('{"type":"daily"}'::jsonb, now() - interval '1 second')
+             public.next_occurrence('{"type":"daily"}'::jsonb, now() - interval '1 day')
       from (values ('Make bed'), ('Brush teeth'), ('Feed pet'), ('Tidy room'), ('Homework')) t(title);
     end if;
   end loop;

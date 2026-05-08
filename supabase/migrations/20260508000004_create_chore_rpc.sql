@@ -32,7 +32,10 @@ begin
 
   perform public.next_occurrence(recurrence, now());
 
-  initial_next_due := public.next_occurrence(recurrence, now() - interval '1 second');
+  -- For initial seeding, look back ~1 day so today's first occurrence is included.
+  -- (next_occurrence returns the soonest moment AFTER `after`, so `now() - 1 second`
+  -- would skip today and only emit tomorrow's instance.)
+  initial_next_due := public.next_occurrence(recurrence, now() - interval '1 day');
 
   insert into public.chores(
     family_id, title, description, star_value, assignee_profile_id,
