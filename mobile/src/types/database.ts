@@ -253,11 +253,96 @@ export type Database = {
           },
         ]
       }
+      star_ledger: {
+        Row: {
+          created_at: string
+          delta: number
+          family_id: string
+          id: string
+          profile_id: string
+          reason: string
+          source_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          delta: number
+          family_id: string
+          id?: string
+          profile_id: string
+          reason: string
+          source_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          delta?: number
+          family_id?: string
+          id?: string
+          profile_id?: string
+          reason?: string
+          source_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "star_ledger_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "star_ledger_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      streaks: {
+        Row: {
+          current_count: number
+          family_id: string
+          last_completion_date: string | null
+          longest_count: number
+          profile_id: string
+        }
+        Insert: {
+          current_count?: number
+          family_id: string
+          last_completion_date?: string | null
+          longest_count?: number
+          profile_id: string
+        }
+        Update: {
+          current_count?: number
+          family_id?: string
+          last_completion_date?: string | null
+          longest_count?: number
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "streaks_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaks_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      approve_chore: { Args: { instance_id: string }; Returns: undefined }
       archive_chore: { Args: { chore_id: string }; Returns: undefined }
       complete_chore: {
         Args: {
@@ -292,7 +377,12 @@ export type Database = {
         Returns: string
       }
       current_family_id: { Args: never; Returns: string }
+      current_streak: { Args: { p: string }; Returns: number }
       next_occurrence: { Args: { after: string; rec: Json }; Returns: string }
+      reject_chore: {
+        Args: { instance_id: string; reason?: string }
+        Returns: undefined
+      }
       seed_starter_chores: { Args: { family_id: string }; Returns: number }
       update_chore: {
         Args: {
