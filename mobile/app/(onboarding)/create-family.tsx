@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button } from '../../src/components/Button';
 import { TextField } from '../../src/components/TextField';
@@ -7,6 +7,7 @@ import { AvatarPicker } from '../../src/components/AvatarPicker';
 import type { AvatarId } from '../../src/constants/avatars';
 import { supabase } from '../../src/lib/supabase';
 import { refetchFamily } from '../../src/hooks/useFamily';
+import { signOut } from '../../src/lib/auth';
 
 export default function CreateFamilyScreen() {
   const router = useRouter();
@@ -59,6 +60,9 @@ export default function CreateFamilyScreen() {
       <AvatarPicker value={avatar} onChange={setAvatar} />
       {error && <Text style={styles.error}>{error}</Text>}
       <Button label="Create family" onPress={onSubmit} loading={loading} />
+      <Pressable onPress={signOut} style={styles.signOut}>
+        <Text style={styles.signOutText}>Sign out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -68,4 +72,6 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '700', marginBottom: 16, textAlign: 'center' },
   label: { fontSize: 14, fontWeight: '500', color: '#374151' },
   error: { color: '#ef4444', marginBottom: 12, textAlign: 'center' },
+  signOut: { paddingVertical: 12, alignItems: 'center', marginTop: 12 },
+  signOutText: { color: '#6b7280', fontSize: 13 },
 });
