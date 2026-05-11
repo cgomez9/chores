@@ -29,7 +29,7 @@ export default function JoinFamilyScreen() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     refetchFamily();
-    // Layout will redirect to /(app) when has-family resolves.
+    router.replace('/(app)' as never);
   }
 
   return (
