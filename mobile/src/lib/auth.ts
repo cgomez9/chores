@@ -13,6 +13,11 @@ export async function signIn(email: string, password: string) {
 }
 
 export async function signOut() {
+  try {
+    await supabase.rpc('set_push_token', { token: '' });
+  } catch {
+    // best-effort — don't block sign-out on network blip
+  }
   const { error } = await supabase.auth.signOut();
   if (error) throw new Error(error.message);
 }

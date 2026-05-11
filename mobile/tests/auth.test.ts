@@ -9,6 +9,7 @@ jest.mock('../src/lib/supabase', () => ({
       signOut: jest.fn(),
       resetPasswordForEmail: jest.fn(),
     },
+    rpc: jest.fn().mockResolvedValue({ error: null }),
   },
 }));
 
