@@ -209,6 +209,61 @@ export type Database = {
         }
         Relationships: []
       }
+      family_invites: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          family_id: string
+          id: string
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by: string
+          expires_at?: string
+          family_id: string
+          id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          family_id?: string
+          id?: string
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_invites_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "family_invites_used_by_fkey"
+            columns: ["used_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_id: number
@@ -461,6 +516,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_invite: {
+        Args: { avatar_id: number; code: string; display_name: string }
+        Returns: string
+      }
       approve_chore: { Args: { instance_id: string }; Returns: undefined }
       approve_redemption: {
         Args: { redemption_id: string }
@@ -496,6 +555,7 @@ export type Database = {
         }
         Returns: string
       }
+      create_family_invite: { Args: never; Returns: string }
       create_kid_profile: {
         Args: { avatar: number; kid_name: string; pin_hash?: string }
         Returns: string
@@ -534,6 +594,7 @@ export type Database = {
         Returns: string
       }
       seed_starter_chores: { Args: { family_id: string }; Returns: number }
+      set_push_token: { Args: { token: string }; Returns: undefined }
       update_chore: {
         Args: {
           assignee_profile_id?: string
