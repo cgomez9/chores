@@ -9,6 +9,8 @@ import { useFamily } from '../src/hooks/useFamily';
 import { queryClient } from '../src/lib/queryClient';
 import { subscribeToFamily } from '../src/lib/realtime';
 import { supabase } from '../src/lib/supabase';
+import { ConfettiHost } from '../src/components/ConfettiHost';
+import { AchievementBanner } from '../src/components/AchievementBanner';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -69,6 +71,8 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <RealtimeBridge />
       <Slot />
+      <ConfettiHost />
+      <AchievementBanner />
     </QueryClientProvider>
   );
 }
