@@ -1,8 +1,10 @@
 // mobile/app/(app)/kid/[profileId]/index.tsx
+import { useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { View, Text, Pressable, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../../../src/lib/supabase';
+import { fireSmallFeedback, fireBigFeedback } from '../../../../src/lib/feedback';
 
 type Instance = {
   id: string;
@@ -73,6 +75,7 @@ export default function KidHome() {
 
   function onDone(inst: Instance) {
     if (!inst.chore) return;
+    fireSmallFeedback();
     if (inst.chore.verification_mode === 'photo') {
       router.push(`/(app)/kid/${profileId}/chore/${inst.id}/photo` as never);
       return;
@@ -80,11 +83,44 @@ export default function KidHome() {
     complete.mutate({ instanceId: inst.id });
   }
 
+  useEffect(() => {
+    if (!profileId) return;
+    const choreChannel = supabase
+      .channel(`kid-feedback-chore-${profileId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'chore_instances',
+        filter: `completed_by=eq.${profileId}`,
+      }, (payload) => {
+        const oldStatus = (payload.old as any)?.status;
+        const newStatus = (payload.new as any)?.status;
+        if (newStatus === 'approved' && oldStatus !== 'approved') fireBigFeedback();
+      })
+      .subscribe();
+    const redChannel = supabase
+      .channel(`kid-feedback-red-${profileId}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'redemptions',
+        filter: `kid_profile_id=eq.${profileId}`,
+      }, (payload) => {
+        const oldStatus = (payload.old as any)?.status;
+        const newStatus = (payload.new as any)?.status;
+        if (newStatus === 'fulfilled' && oldStatus !== 'fulfilled') fireBigFeedback();
+      })
+      .subscribe();
+    return () => {
+      supabase.removeChannel(choreChannel);
+      supabase.removeChannel(redChannel);
+    };
+  }, [profileId]);
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Today's chores</Text>
         <View style={{ flexDirection: 'row', gap: 16 }}>
+          <Pressable onPress={() => router.push(`/(app)/kid/${profileId}/badges` as never)}>
+            <Text style={styles.switch}>Badges</Text>
+          </Pressable>
           <Pressable onPress={() => router.push(`/(app)/kid/${profileId}/rewards` as never)}>
             <Text style={styles.switch}>Rewards</Text>
           </Pressable>
