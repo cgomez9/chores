@@ -34,6 +34,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          achievement_key: string
+          family_id: string
+          id: string
+          profile_id: string
+          unlocked_at: string
+        }
+        Insert: {
+          achievement_key: string
+          family_id: string
+          id?: string
+          profile_id: string
+          unlocked_at?: string
+        }
+        Update: {
+          achievement_key?: string
+          family_id?: string
+          id?: string
+          profile_id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievements_family_id_fkey"
+            columns: ["family_id"]
+            isOneToOne: false
+            referencedRelation: "families"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achievements_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chore_instances: {
         Row: {
           approved_at: string | null
@@ -527,6 +566,7 @@ export type Database = {
       }
       archive_chore: { Args: { chore_id: string }; Returns: undefined }
       archive_reward: { Args: { reward_id: string }; Returns: undefined }
+      check_achievements: { Args: { p_profile_id: string }; Returns: string[] }
       complete_chore: {
         Args: {
           instance_id: string
