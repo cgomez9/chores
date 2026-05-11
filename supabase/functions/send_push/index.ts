@@ -5,7 +5,20 @@ type PushEvent =
   | { event: 'chore_submitted' | 'chore_approved' | 'chore_rejected';
       family_id: string; instance_id: string; kid_profile_id: string | null }
   | { event: 'redemption_requested' | 'redemption_approved' | 'redemption_denied' | 'redemption_fulfilled';
-      family_id: string; redemption_id: string; reward_id: string; kid_profile_id: string };
+      family_id: string; redemption_id: string; reward_id: string; kid_profile_id: string }
+  | { event: 'achievement_unlocked';
+      family_id: string; profile_id: string; achievement_key: string };
+
+const ACHIEVEMENTS_EDGE: Record<string, { emoji: string; title: string; description: string }> = {
+  first_star:   { emoji: '⭐', title: 'First Star',      description: 'Earn your first star' },
+  stars_100:    { emoji: '💯', title: 'Century',         description: 'Earn 100 stars total' },
+  stars_500:    { emoji: '🏆', title: 'High Roller',     description: 'Earn 500 stars total' },
+  streak_7:     { emoji: '🔥', title: 'Week Streak',     description: 'Earn stars 7 days in a row' },
+  streak_30:    { emoji: '🌟', title: 'Month Streak',    description: 'Earn stars 30 days in a row' },
+  first_chore:  { emoji: '✅', title: 'Getting Started', description: 'Get your first chore approved' },
+  chores_25:    { emoji: '💪', title: 'Quarter Century', description: 'Get 25 chores approved' },
+  first_reward: { emoji: '🎁', title: 'First Reward',    description: 'Redeem your first reward' },
+};
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST') return new Response('method not allowed', { status: 405 });
@@ -17,7 +30,7 @@ Deno.serve(async (req) => {
 
   const payload = (await req.json()) as PushEvent;
 
-  // 1. Resolve recipient parent push tokens.
+  // 1. Resolve recipient tokens.
   const { data: parents, error: pErr } = await supabase
     .from('profiles')
     .select('push_token')
@@ -30,7 +43,7 @@ Deno.serve(async (req) => {
     .filter((t) => t && t.length > 0);
   if (tokens.length === 0) return new Response(JSON.stringify({ sent: 0, reason: 'no tokens' }), { status: 200 });
 
-  // 2. Resolve auxiliary data + format message.
+  // 2. Build message per event.
   let title = 'Shores';
   let body = '';
   if (payload.event.startsWith('chore_')) {
@@ -45,7 +58,7 @@ Deno.serve(async (req) => {
     if (payload.event === 'chore_submitted') body = `${kid} submitted '${choreTitle}' 📸`;
     else if (payload.event === 'chore_approved') body = `+${stars}⭐! Great job on '${choreTitle}' 🎉`;
     else if (payload.event === 'chore_rejected') body = `'${choreTitle}' needs another look`;
-  } else {
+  } else if (payload.event.startsWith('redemption_')) {
     const { data: red } = await supabase
       .from('redemptions')
       .select('star_cost_snapshot,kid:profiles!redemptions_kid_profile_id_fkey(display_name),reward:rewards(title)')
@@ -58,9 +71,20 @@ Deno.serve(async (req) => {
     else if (payload.event === 'redemption_approved') body = `${rewardTitle} approved! 🍦`;
     else if (payload.event === 'redemption_denied') body = `Request for ${rewardTitle} was denied`;
     else if (payload.event === 'redemption_fulfilled') body = `🎁 ${kid} got their ${rewardTitle}`;
+  } else if (payload.event === 'achievement_unlocked') {
+    const ach = payload as { profile_id: string; achievement_key: string };
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', ach.profile_id)
+      .single();
+    const kid = (profile as any)?.display_name ?? 'A kid';
+    const a = ACHIEVEMENTS_EDGE[ach.achievement_key];
+    if (a) body = `${a.emoji} ${kid} earned ${a.title}: ${a.description}`;
+    else body = `${kid} unlocked a new achievement`;
   }
 
-  // 3. Build Expo Push messages and POST.
+  // 3. POST to Expo Push.
   const messages = tokens.map((to) => ({ to, sound: 'default', title, body }));
   const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
     method: 'POST',
