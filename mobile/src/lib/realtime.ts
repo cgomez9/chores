@@ -1,5 +1,6 @@
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { QueryClient } from '@tanstack/react-query';
+import { emit } from './events';
 import { supabase } from './supabase';
 
 export function subscribeToFamily(familyId: string, queryClient: QueryClient): RealtimeChannel {
@@ -31,6 +32,14 @@ export function subscribeToFamily(familyId: string, queryClient: QueryClient): R
       () => {
         queryClient.invalidateQueries({ queryKey: ['balance'] });
         queryClient.invalidateQueries({ queryKey: ['streak'] });
+      },
+    )
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'achievements', filter: `family_id=eq.${familyId}` },
+      (payload) => {
+        const row = payload.new as { achievement_key: string; profile_id: string };
+        emit('achievement_unlocked', { key: row.achievement_key, profile_id: row.profile_id });
       },
     )
     .subscribe();
