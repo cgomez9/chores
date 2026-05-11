@@ -60,6 +60,9 @@ export default function CreateFamilyScreen() {
       <AvatarPicker value={avatar} onChange={setAvatar} />
       {error && <Text style={styles.error}>{error}</Text>}
       <Button label="Create family" onPress={onSubmit} loading={loading} />
+      <Pressable onPress={() => router.push('/(onboarding)/join-family' as never)} style={styles.joinLink}>
+        <Text style={styles.joinLinkText}>Have an invite code? Join an existing family</Text>
+      </Pressable>
       <Pressable onPress={signOut} style={styles.signOut}>
         <Text style={styles.signOutText}>Sign out</Text>
       </Pressable>
@@ -74,4 +77,6 @@ const styles = StyleSheet.create({
   error: { color: '#ef4444', marginBottom: 12, textAlign: 'center' },
   signOut: { paddingVertical: 12, alignItems: 'center', marginTop: 12 },
   signOutText: { color: '#6b7280', fontSize: 13 },
+  joinLink: { paddingVertical: 14, alignItems: 'center', marginTop: 8 },
+  joinLinkText: { color: '#3b82f6', fontSize: 14, fontWeight: '500' },
 });
